@@ -4,43 +4,47 @@ import (
 	"log"
 	"net/http"
 
+	"websocket-backend/services/websocket-service/internal"
+
 	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-
-		return true
+		return true // In production, validate the origin!
 	},
 }
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
-
-	ws, err := upgrader.Upgrade(w, r, nil)
+func serveWs(hub *internal.Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("Upgrade Error: ", err)
+		log.Printf("Upgrade error: %v", err)
 		return
 	}
-	defer ws.Close()
-
-	for {
-		_, msg, err := ws.ReadMessage()
-
-		if err != nil {
-			log.Println("Read Error: ", err)
-			break
+	// Register connection using exported method.
+	hub.RegisterConnection(conn)
+	go func() {
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				break
+			}
+			// Use the exported Broadcast method.
+			hub.Broadcast(message)
 		}
-		log.Printf("Received: %s", msg)
-
-	}
+	}()
 }
 
 func main() {
-	http.HandleFunc("/ws", handleConnections)
+	hub := internal.NewHub()
+	go hub.Run()
 
-	log.Println("Websocket server starting on :8080")
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
+	log.Println("WebSocket Service is running on port 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
