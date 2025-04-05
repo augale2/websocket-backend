@@ -1,0 +1,9 @@
+# Binaries
+/bin
+/build
+
+# Go modules
+/vendor
+
+# OS files
+.DS_Store
