@@ -14,6 +14,7 @@ service DocumentService {
 message CreateDocumentRequest {
   string title = 1;
   string content = 2;
+  string token=3;
 }
 
 // Response after creating a document
@@ -27,6 +28,7 @@ message UpdateDocumentRequest {
   string document_id = 1;
   string content = 2;
   string title = 3;
+  string token=4;
   // You can add fields like user_id, timestamp, or change type if needed
 }
 
@@ -38,6 +40,7 @@ message UpdateDocumentResponse {
 // Request to fetch a document
 message GetDocumentRequest {
   string document_id = 1;
+  string token=2;
 }
 
 // Response containing the document details

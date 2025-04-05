@@ -26,6 +26,7 @@ type CreateDocumentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Token         string                 `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -70,6 +71,13 @@ func (x *CreateDocumentRequest) GetTitle() string {
 func (x *CreateDocumentRequest) GetContent() string {
 	if x != nil {
 		return x.Content
+	}
+	return ""
+}
+
+func (x *CreateDocumentRequest) GetToken() string {
+	if x != nil {
+		return x.Token
 	}
 	return ""
 }
@@ -132,7 +140,8 @@ type UpdateDocumentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"` // You can add fields like user_id, timestamp, or change type if needed
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Token         string                 `protobuf:"bytes,4,opt,name=token,proto3" json:"token,omitempty"` // You can add fields like user_id, timestamp, or change type if needed
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -188,6 +197,13 @@ func (x *UpdateDocumentRequest) GetTitle() string {
 	return ""
 }
 
+func (x *UpdateDocumentRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
 // Response after updating a document
 type UpdateDocumentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -237,6 +253,7 @@ func (x *UpdateDocumentResponse) GetMessage() string {
 type GetDocumentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -274,6 +291,13 @@ func (*GetDocumentRequest) Descriptor() ([]byte, []int) {
 func (x *GetDocumentRequest) GetDocumentId() string {
 	if x != nil {
 		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *GetDocumentRequest) GetToken() string {
+	if x != nil {
+		return x.Token
 	}
 	return ""
 }
@@ -343,24 +367,27 @@ var File_document_proto protoreflect.FileDescriptor
 
 const file_document_proto_rawDesc = "" +
 	"\n" +
-	"\x0edocument.proto\x12\bdocument\"G\n" +
+	"\x0edocument.proto\x12\bdocument\"]\n" +
 	"\x15CreateDocumentRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\"S\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x14\n" +
+	"\x05token\x18\x03 \x01(\tR\x05token\"S\n" +
 	"\x16CreateDocumentResponse\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
 	"documentId\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"h\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"~\n" +
 	"\x15UpdateDocumentRequest\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
 	"documentId\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x14\n" +
-	"\x05title\x18\x03 \x01(\tR\x05title\"2\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x14\n" +
+	"\x05token\x18\x04 \x01(\tR\x05token\"2\n" +
 	"\x16UpdateDocumentResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"5\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"K\n" +
 	"\x12GetDocumentRequest\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
-	"documentId\"f\n" +
+	"documentId\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\"f\n" +
 	"\x13GetDocumentResponse\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
 	"documentId\x12\x14\n" +
