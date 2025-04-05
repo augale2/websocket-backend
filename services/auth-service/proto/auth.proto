@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "websocket-backend/services/auth-service/proto;auth";
+
+
+service AuthService {
+    rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
+    rpc LoginUser(LoginUserRequest) returns (LoginUserResponse);
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message RegisterUserRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message RegisterUserResponse {
+    string user_id = 1;
+    string message = 2;
+}
+
+message LoginUserRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message LoginUserResponse {
+    string token = 1;
+    string message = 2;
+}
+
+message ValidateTokenRequest{
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    bool valid = 1;
+    string message = 2;
+}
