@@ -267,10 +267,8 @@ func main() {
 		})
 	}
 
-	// Wrap gRPC server with gRPC-Web
 	wrappedGrpc := grpcweb.WrapServer(s,
 		grpcweb.WithOriginFunc(func(origin string) bool {
-			// In production, configure this to match frontend origin
 			return true
 		}),
 		grpcweb.WithWebsockets(true),
@@ -279,28 +277,23 @@ func main() {
 		}),
 	)
 
-	// Create HTTP server that handles both gRPC-Web and REST endpoints
 	httpServer := &http.Server{
 		Addr: ":50052",
 		Handler: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-			// Handle CORS
 			resp.Header().Set("Access-Control-Allow-Origin", "*")
 			resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User-Agent, X-Grpc-Web")
 
-			// Handle CORS preflight
 			if req.Method == "OPTIONS" {
 				resp.WriteHeader(http.StatusOK)
 				return
 			}
 
-			// Check if it's a gRPC-Web request
 			if wrappedGrpc.IsGrpcWebRequest(req) || wrappedGrpc.IsAcceptableGrpcCorsRequest(req) {
 				wrappedGrpc.ServeHTTP(resp, req)
 				return
 			}
 
-			// Otherwise, use the router for REST endpoints
 			corsMiddleware(router).ServeHTTP(resp, req)
 		}),
 	}

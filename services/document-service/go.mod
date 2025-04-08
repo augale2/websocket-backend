@@ -2,6 +2,8 @@ module websocket-backend/services/document-service
 
 replace websocket-backend/services/auth-service => ../auth-service
 
+replace websocket-backend/services/websocket-service => ../websocket-service
+
 go 1.24.1
 
 require (
@@ -10,8 +12,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.1
 	github.com/google/uuid v1.6.0
 	google.golang.org/grpc v1.71.1
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.6
 	websocket-backend/services/auth-service v0.0.0-00010101000000-000000000000
+	websocket-backend/services/websocket-service v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -26,9 +29,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18 // indirect
-	github.com/aws/smithy-go v1.22.2 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
+	github.com/aws/smithy-go v1.22.3 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250407143221-ac9807e6c755 // indirect
 )

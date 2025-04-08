@@ -18,11 +18,47 @@ import (
 	auth "websocket-backend/services/auth-service/pkg/authclient"
 
 	"websocket-backend/services/document-service/internal/db"
+
+	wsclient "websocket-backend/services/document-service/pkg/wsclient"
+
+	ws "websocket-backend/services/websocket-service/proto"
 )
 
 type server struct {
 	pb.UnimplementedDocumentServiceServer
 	dbClient *db.DynamoDBClient
+}
+
+func publishDocumentEvent(ctx context.Context, documentID, eventType, title, content string) error {
+	// Connect to the websocket service on port 50053.
+	wsClient, conn, err := wsclient.CreateWSClient("localhost:50053")
+	if err != nil {
+		return fmt.Errorf("failed to create ws client: %v", err)
+	}
+	defer conn.Close()
+
+	// Create an event with the current timestamp.
+	event := &ws.DocumentEvent{
+		DocumentId: documentID,
+		EventType:  eventType,
+		Title:      title,
+		Content:    content,
+		Timestamp:  time.Now().Unix(),
+	}
+
+	// Call the PublishDocumentEvent method with a timeout.
+	callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	res, err := wsClient.PublishDocumentEvent(callCtx, event)
+	if err != nil {
+		return fmt.Errorf("PublishDocumentEvent call failed: %v", err)
+	}
+	if !res.Success {
+		return fmt.Errorf("websocket service error: %s", res.Message)
+	}
+	log.Printf("Event published: %s for document %s", eventType, documentID)
+	return nil
 }
 
 func validateUserToken(ctx context.Context, token string) error {
@@ -47,17 +83,23 @@ func validateUserToken(ctx context.Context, token string) error {
 	}
 	return nil
 }
-
 func (s *server) CreateDocument(ctx context.Context, req *pb.CreateDocumentRequest) (*pb.CreateDocumentResponse, error) {
-
 	if err := validateUserToken(ctx, req.GetToken()); err != nil {
 		return nil, err
 	}
+
 	docID, err := s.dbClient.CreateDocument(ctx, req.GetTitle(), req.GetContent())
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("Created document with ID: %s", docID)
+
+	// Publish a "created" event.
+	if err := publishDocumentEvent(ctx, docID, "created", req.GetTitle(), req.GetContent()); err != nil {
+		log.Printf("Error publishing 'document_created' event: %v", err)
+		// Decide whether to fail the request or simply log the error.
+	}
+
 	return &pb.CreateDocumentResponse{
 		DocumentId: docID,
 		Message:    "Document created successfully",
@@ -65,7 +107,6 @@ func (s *server) CreateDocument(ctx context.Context, req *pb.CreateDocumentReque
 }
 
 func (s *server) UpdateDocument(ctx context.Context, req *pb.UpdateDocumentRequest) (*pb.UpdateDocumentResponse, error) {
-
 	if err := validateUserToken(ctx, req.GetToken()); err != nil {
 		return nil, err
 	}
@@ -74,6 +115,12 @@ func (s *server) UpdateDocument(ctx context.Context, req *pb.UpdateDocumentReque
 		return nil, err
 	}
 	log.Printf("Updated document with ID: %s", req.GetDocumentId())
+
+	// Publish an "updated" event.
+	if err := publishDocumentEvent(ctx, req.GetDocumentId(), "updated", req.GetTitle(), req.GetContent()); err != nil {
+		log.Printf("Error publishing 'document_updated' event: %v", err)
+	}
+
 	return &pb.UpdateDocumentResponse{
 		Message: "Document updated successfully",
 	}, nil

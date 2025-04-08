@@ -2,11 +2,17 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 
 	"websocket-backend/services/websocket-service/internal"
 
 	"github.com/gorilla/websocket"
+
+	pb "websocket-backend/services/websocket-service/proto"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var upgrader = websocket.Upgrader{
@@ -39,12 +45,26 @@ func main() {
 	hub := internal.NewHub()
 	go hub.Run()
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
+	go func() {
+		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			serveWs(hub, w, r)
+		})
+		log.Println("WebSocket HTTP server is running on port 8080")
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			log.Fatalf("Failed to start HTTP server: %v", err)
+		}
+	}()
 
-	log.Println("WebSocket Service is running on port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	lis, err := net.Listen("tcp", ":50053")
+	if err != nil {
+		log.Fatalf("Failed to listen on port 50053: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	wsGRPCServer := &internal.WebsocketGRPCServer{Hub: hub}
+	pb.RegisterWebsocketServiceServer(grpcServer, wsGRPCServer)
+	reflection.Register(grpcServer)
+	log.Println("WebSocket gRPC server is running on port 50053")
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve gRPC server: %v", err)
 	}
 }

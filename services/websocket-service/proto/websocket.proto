@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package websocket;
+
+option go_package = "websocket-backend/services/websocket-service/proto;websocket";
+
+message DocumentEvent {
+    string document_id = 1;
+
+    string event_type = 2; // "created", "updated", or "deleted"
+
+    string title = 3;
+    string content = 4;
+
+    int64 timestamp = 5;
+}
+
+message EventResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+service WebsocketService {
+    rpc PublishDocumentEvent(DocumentEvent) returns (EventResponse);
+}
