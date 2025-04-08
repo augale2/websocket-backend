@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -16,6 +16,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/gorilla/mux"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
+
+	"net/http"
 )
 
 var jwtSecret = []byte("abhishekisking")
@@ -144,22 +149,164 @@ func (s *authServer) ValidateToken(ctx context.Context, req *pb.ValidateTokenReq
 	}, nil
 }
 
-func main() {
+// HTTP handler functions
+func (s *authServer) handleRegister(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-	lis, err := net.Listen("tcp", ":50052")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
 	}
 
+	resp, err := s.RegisterUser(r.Context(), &pb.RegisterUserRequest{
+		Username: req.Username,
+		Password: req.Password,
+	})
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Registration failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *authServer) handleLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	resp, err := s.LoginUser(r.Context(), &pb.LoginUserRequest{
+		Username: req.Username,
+		Password: req.Password,
+	})
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Login failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *authServer) handleValidateToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	resp, err := s.ValidateToken(r.Context(), &pb.ValidateTokenRequest{
+		Token: req.Token,
+	})
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Token validation failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+func main() {
+	// Create the gRPC server
 	s := grpc.NewServer()
+	authServer := newAuthServer()
+	pb.RegisterAuthServiceServer(s, authServer)
+	reflection.Register(s)
 
-	pb.RegisterAuthServiceServer(s, newAuthServer())
+	// Create HTTP router
+	router := mux.NewRouter()
+	router.HandleFunc("/v1/auth/register", authServer.handleRegister).Methods("POST", "OPTIONS")
+	router.HandleFunc("/v1/auth/login", authServer.handleLogin).Methods("POST", "OPTIONS")
+	router.HandleFunc("/v1/auth/validate", authServer.handleValidateToken).Methods("POST", "OPTIONS")
 
-	reflection.Register(s) // for grpcurl
+	// Add CORS middleware
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User-Agent, X-Grpc-Web")
 
-	log.Println("Auth Service gRPC server is running on port 50052")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 
-	if err := s.Serve(lis); err != nil {
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Wrap gRPC server with gRPC-Web
+	wrappedGrpc := grpcweb.WrapServer(s,
+		grpcweb.WithOriginFunc(func(origin string) bool {
+			// In production, configure this to match frontend origin
+			return true
+		}),
+		grpcweb.WithWebsockets(true),
+		grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool {
+			return true
+		}),
+	)
+
+	// Create HTTP server that handles both gRPC-Web and REST endpoints
+	httpServer := &http.Server{
+		Addr: ":50052",
+		Handler: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+			// Handle CORS
+			resp.Header().Set("Access-Control-Allow-Origin", "*")
+			resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User-Agent, X-Grpc-Web")
+
+			// Handle CORS preflight
+			if req.Method == "OPTIONS" {
+				resp.WriteHeader(http.StatusOK)
+				return
+			}
+
+			// Check if it's a gRPC-Web request
+			if wrappedGrpc.IsGrpcWebRequest(req) || wrappedGrpc.IsAcceptableGrpcCorsRequest(req) {
+				wrappedGrpc.ServeHTTP(resp, req)
+				return
+			}
+
+			// Otherwise, use the router for REST endpoints
+			corsMiddleware(router).ServeHTTP(resp, req)
+		}),
+	}
+
+	log.Println("Auth Service server is running on port 50052")
+	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }
