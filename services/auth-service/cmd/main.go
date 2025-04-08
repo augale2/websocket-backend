@@ -155,7 +155,7 @@ func main() {
 
 	pb.RegisterAuthServiceServer(s, newAuthServer())
 
-	reflection.Register(s)
+	reflection.Register(s) // for grpcurl
 
 	log.Println("Auth Service gRPC server is running on port 50052")
 

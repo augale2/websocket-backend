@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package presence;
+
+option go_package = "websocket-backend/services/presence-service/proto;presence";
+
+service PresenceService {
+  rpc UpdatePresence (UpdatePresenceRequest) returns (UpdatePresenceResponse);
+  rpc GetOnlineUsers (GetOnlineUsersRequest) returns (GetOnlineUsersResponse);
+}
+
+message UpdatePresenceRequest {
+  string user_id = 1;
+  string token = 2;
+}
+
+message UpdatePresenceResponse {
+  string message = 1;
+}
+
+message GetOnlineUsersRequest {
+  int32 timeout_seconds = 1;
+  string token = 2;
+}
+
+message GetOnlineUsersResponse {
+  repeated string user_ids = 1;
+}
